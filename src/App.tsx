@@ -457,10 +457,12 @@ export default function App() {
       <header className="app-header">
         <div className="header-inner">
           <button className="brand" onClick={() => setTab('marketplace')}>
-            <span className="brand-mark">TF</span>
+            <span className="brand-mark">
+              <img src="/tenderfit-logo.svg" alt="TenderFit logo" />
+            </span>
             <span className="brand-copy">
               <strong>TenderFit</strong>
-              <small>AI-qualified procurement</small>
+              <small>Procurement qualification market</small>
             </span>
           </button>
 
@@ -486,7 +488,11 @@ export default function App() {
           </nav>
 
           <div className="header-actions">
-            <span className="network-chip"><i /> {NETWORK_NAME}</span>
+            <span className="network-chip chain-chip"><i /> StudioNet · 61999</span>
+            <span className="genlayer-mini">
+              <img src="/genlayer-logo.jpg" alt="GenLayer logo" />
+              Built on GenLayer
+            </span>
             <button className="wallet-button" onClick={handleConnect} disabled={walletBusy}>
               <span className={wallet ? 'wallet-dot connected' : 'wallet-dot'} />
               {walletBusy ? 'Connecting…' : wallet ? shortAddress(wallet) : 'Connect wallet'}
@@ -495,39 +501,75 @@ export default function App() {
         </div>
       </header>
 
+      <div className="signal-tape" aria-hidden="true">
+        <div>
+          <span>QUALIFY BY FIT</span><b>◆</b><span>AWARD BY PRICE</span><b>◆</b><span>STATE ONCHAIN</span><b>◆</b>
+          <span>QUALIFY BY FIT</span><b>◆</b><span>AWARD BY PRICE</span><b>◆</b><span>STATE ONCHAIN</span>
+        </div>
+      </div>
+
       <main className="app-main">
-        <section className="page-intro">
-          {tab === 'marketplace' && (
-            <>
-              <span className="overline">Procurement marketplace</span>
-              <h1>AI checks the fit. The contract picks the price.</h1>
-              <p>
-                Suppliers are judged against the brief one bid at a time. Among qualified bids,
-                the lowest price wins deterministically.
-              </p>
-            </>
-          )}
+        <section className={`page-intro page-intro-${tab}`}>
+          <div className="intro-copy">
+            <div className="intro-brand-row">
+              <img className="intro-logo" src="/tenderfit-logo.svg" alt="TenderFit logo" />
+              <div>
+                <span className="overline">TenderFit / Live procurement desk</span>
+                <span className="intro-micro">Semantic qualification + deterministic award</span>
+              </div>
+            </div>
 
-          {tab === 'create' && (
-            <>
-              <span className="overline">Buyer workspace</span>
-              <h1>Create a clear procurement brief.</h1>
-              <p>
-                State the mandatory requirements, set the budget and deadline, then let GenLayer
-                qualify supplier proposals.
-              </p>
-            </>
-          )}
+            {tab === 'marketplace' && (
+              <>
+                <h1>Qualification first.<br /><em>Price second.</em></h1>
+                <p>
+                  A procurement room where GenLayer decides whether each proposal actually fits the brief,
+                  then the contract awards the lowest-priced qualified bid.
+                </p>
+              </>
+            )}
 
-          {tab === 'activity' && (
-            <>
-              <span className="overline">Wallet view</span>
-              <h1>Your TenderFit activity.</h1>
-              <p>
-                See your role and accepted on-chain activity for the procurement currently loaded.
-              </p>
-            </>
-          )}
+            {tab === 'create' && (
+              <>
+                <h1>Write the brief like<br /><em>a decision rule.</em></h1>
+                <p>
+                  Define mandatory requirements, maximum budget and the bidding window. TenderFit keeps the
+                  semantic judgment separate from deterministic price selection.
+                </p>
+              </>
+            )}
+
+            {tab === 'activity' && (
+              <>
+                <h1>Your wallet,<br /><em>your tender trail.</em></h1>
+                <p>
+                  Review your role, qualification outcome and accepted on-chain activity for the procurement
+                  currently loaded.
+                </p>
+              </>
+            )}
+          </div>
+
+          <div className="decision-board">
+            <div className="decision-board-head">
+              <span>DECISION ROUTE</span>
+              <span className="live-dot"><i /> LIVE</span>
+            </div>
+            <div className="decision-step semantic">
+              <b>01</b>
+              <div><span>GENLAYER</span><strong>Does the bid fit?</strong></div>
+              <mark>SEMANTIC</mark>
+            </div>
+            <div className="decision-step deterministic">
+              <b>02</b>
+              <div><span>CONTRACT</span><strong>Which qualified price is lowest?</strong></div>
+              <mark>DETERMINISTIC</mark>
+            </div>
+            <div className="decision-board-foot">
+              <span className="genlayer-lockup"><img src="/genlayer-logo.jpg" alt="GenLayer logo" /> Built on GenLayer</span>
+              <span>{shortAddress(CONTRACT_ADDRESS)}</span>
+            </div>
+          </div>
         </section>
 
         {error && (
@@ -605,7 +647,7 @@ export default function App() {
             {!procurement ? (
               <div className="empty-dashboard">
                 <div className="empty-copy">
-                  <span className="empty-icon">TF</span>
+                  <span className="empty-icon"><img src="/tenderfit-logo.svg" alt="" /></span>
                   <h2>Load a procurement to begin.</h2>
                   <p>
                     Enter an ID above to see the brief, AI qualification results and final award.
@@ -1021,13 +1063,13 @@ export default function App() {
       </main>
 
       <footer className="app-footer">
-        <div>
-          <strong>TenderFit</strong>
-          <span>AI-qualified procurement on GenLayer</span>
+        <div className="footer-brand">
+          <img src="/tenderfit-logo.svg" alt="TenderFit logo" />
+          <div><strong>TenderFit</strong><span>Qualification market for on-chain procurement</span></div>
         </div>
-        <div>
-          <span>{NETWORK_NAME}</span>
-          <code>{shortAddress(CONTRACT_ADDRESS)}</code>
+        <div className="footer-genlayer">
+          <img src="/genlayer-logo.jpg" alt="GenLayer logo" />
+          <div><strong>Built on GenLayer</strong><span>{NETWORK_NAME} · {shortAddress(CONTRACT_ADDRESS)}</span></div>
         </div>
       </footer>
     </div>
