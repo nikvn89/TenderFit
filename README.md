@@ -517,5 +517,5 @@ TenderFit solves one focused problem:
 **Core contract logic:** verified  
 **Frontend integration:** verified locally  
 **Frontend final Web3 theme:** visually reviewed  
-**Vercel deployment:** pending  
-**GitHub repository:** pending
+**Vercel deployment:** https://tender-fit.vercel.app/  
+**GitHub repository:** https://github.com/nikvn89/TenderFit
