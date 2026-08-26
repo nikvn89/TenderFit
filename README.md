@@ -19,7 +19,7 @@ GitHub:
 https://github.com/nikvn89/TenderFit
 
 Vercel:  
-https://tender-ewqhg1vhw-nikkks-projects.vercel.app/
+https://tender-fit.vercel.app/
 
 The frontend has been locally built and smoke-tested live on Vercel against the canonical steward-fixed contract.
 
