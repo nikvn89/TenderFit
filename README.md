@@ -221,6 +221,6 @@ Verified evidence:
 - canonical contract displayed by the frontend: `0xfF53f36e409FBC2d42b15e214801656006A7A226`.
 
 Live dApp:  
-https://tender-ewqhg1vhw-nikkks-projects.vercel.app/
+https://tender-fit.vercel.app/
 
 For portal resubmission, use the canonical Explorer address above and this final repository build.
