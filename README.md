@@ -19,9 +19,9 @@ GitHub:
 https://github.com/nikvn89/TenderFit
 
 Vercel:  
-https://tender-fit.vercel.app/
+https://tender-ewqhg1vhw-nikkks-projects.vercel.app/
 
-> The Vercel URL above is the existing project URL. Redeploy this source before treating the live frontend as final evidence for the steward-fixed contract.
+The frontend has been locally built and smoke-tested live on Vercel against the canonical steward-fixed contract.
 
 ## Steward feedback addressed
 
@@ -207,12 +207,20 @@ Then verify the dashboard reads contract:
 0xfF53f36e409FBC2d42b15e214801656006A7A226
 ```
 
-## Submission status
+## Final verification status
 
-Contract runtime testing is complete. Before portal resubmission:
+The steward-fixed contract and frontend are ready for resubmission.
 
-1. run the frontend locally against the canonical deployment;
-2. update the GitHub repository with this source;
-3. redeploy the existing Vercel project;
-4. smoke-test the live deployment;
-5. update the Builder portal contract evidence to the new Explorer address.
+Verified evidence:
+
+- StudioNet runtime suite T1–T8: **PASS**;
+- deterministic finalization regression: **PASS**;
+- local production build and local UI read flow: **PASS**;
+- Vercel live render: **PASS**;
+- Vercel live procurement #1 read: material requirement, accepted attester, qualified bid, attestation proof chip, and Attestation Desk all rendered correctly;
+- canonical contract displayed by the frontend: `0xfF53f36e409FBC2d42b15e214801656006A7A226`.
+
+Live dApp:  
+https://tender-ewqhg1vhw-nikkks-projects.vercel.app/
+
+For portal resubmission, use the canonical Explorer address above and this final repository build.

@@ -33,6 +33,14 @@ STUDIONET RUNTIME PASS
 - T7 semantic-only [] path: incomplete=false, complete=true
 - T8 deterministic finalize: procurement #3 -> bid #5 / 701 / 70000 / RESOLVED
 
-NOT YET CLAIMED
-- local production frontend build in the user's environment
-- live Vercel smoke test against the new contract
+FRONTEND / LIVE PASS
+- local production frontend build completed
+- local UI read flow against canonical contract completed
+- Vercel live render completed
+- Vercel procurement #1 read completed
+- material requirement + accepted attester rendered
+- qualified bid #1 + attestation proof chip rendered
+- Attestation Desk rendered
+- canonical contract address displayed
+
+Live dApp: https://tender-ewqhg1vhw-nikkks-projects.vercel.app/

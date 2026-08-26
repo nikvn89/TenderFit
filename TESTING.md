@@ -156,4 +156,20 @@ PASS frontend copy mirrors verify → qualify → award execution order
 PASS duplicate in-hero Built on GenLayer lockup removed
 ```
 
-A full production frontend build should still be run on the local machine before GitHub/Vercel update.
+## Frontend verification — PASS
+
+Observed after the runtime suite:
+
+```text
+PASS local npm production build
+PASS local UI load against canonical contract
+PASS Vercel live render
+PASS Vercel procurement #1 read
+PASS material requirement + accepted attester rendering
+PASS bid #1 qualified state + attestation proof chip rendering
+PASS Attestation Desk rendering
+PASS canonical contract address displayed
+```
+
+Live dApp:  
+https://tender-ewqhg1vhw-nikkks-projects.vercel.app/
