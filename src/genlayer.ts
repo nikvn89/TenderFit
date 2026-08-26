@@ -92,12 +92,13 @@ export async function createProcurement(
   brief: string,
   maxBudget: number,
   biddingDeadline: number,
+  attestedRequirementsJson: string,
 ) {
   const client = await getWriteClient(wallet)
   return client.writeContract({
     address: CONTRACT_ADDRESS,
     functionName: 'create_procurement',
-    args: [title, brief, maxBudget, biddingDeadline],
+    args: [title, brief, maxBudget, biddingDeadline, attestedRequirementsJson],
     value: 0n,
   })
 }
@@ -113,6 +114,35 @@ export async function submitBid(
     address: CONTRACT_ADDRESS,
     functionName: 'submit_bid',
     args: [procurementId, price, proposalText],
+    value: 0n,
+  })
+}
+
+export async function attestRequirement(
+  wallet: `0x${string}`,
+  supplier: string,
+  reqKey: string,
+  statement: string,
+) {
+  const client = await getWriteClient(wallet)
+  return client.writeContract({
+    address: CONTRACT_ADDRESS,
+    functionName: 'attest',
+    args: [supplier, reqKey, statement],
+    value: 0n,
+  })
+}
+
+export async function revokeAttestation(
+  wallet: `0x${string}`,
+  supplier: string,
+  reqKey: string,
+) {
+  const client = await getWriteClient(wallet)
+  return client.writeContract({
+    address: CONTRACT_ADDRESS,
+    functionName: 'revoke_attestation',
+    args: [supplier, reqKey],
     value: 0n,
   })
 }

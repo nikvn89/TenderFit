@@ -1,6 +1,6 @@
 export const CONTRACT_ADDRESS = (
   import.meta.env.VITE_CONTRACT_ADDRESS ||
-  '0x6f68515e8916570DCa5E73E53e325019cab989D0'
+  '0xfF53f36e409FBC2d42b15e214801656006A7A226'
 ) as `0x${string}`
 
 export const EXPLORER_BASE = 'https://explorer-studio.genlayer.com'

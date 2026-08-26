@@ -1,5 +1,18 @@
 export type ProcurementStatus = 'OPEN' | 'RESOLVED' | 'NO_AWARD' | string
 
+export type AttestedRequirement = {
+  req_key: string
+  label: string
+  accepted_attesters: `0x${string}`[]
+}
+
+export type BidAttestationSnapshot = {
+  attester: `0x${string}`
+  supplier: `0x${string}`
+  req_key: string
+  statement_hash: string
+}
+
 export type Procurement = {
   procurement_id: number
   buyer: `0x${string}`
@@ -9,6 +22,7 @@ export type Procurement = {
   bidding_deadline: number
   status: ProcurementStatus
   bidding_open: boolean
+  attested_requirements: AttestedRequirement[]
   bid_count: number
   winner_bid_id: number
   winner_address: `0x${string}`
@@ -22,6 +36,7 @@ export type Bid = {
   price: number
   proposal_text: string
   qualified: boolean
+  attestations_relied_on: BidAttestationSnapshot[]
 }
 
 export type Result = {

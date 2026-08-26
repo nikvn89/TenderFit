@@ -1,17 +1,29 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import {
+  attestRequirement,
   connectWallet,
   createProcurement,
   finalizeProcurement,
   getBids,
   getConnectedWallet,
   getProcurement,
+  revokeAttestation,
   submitBid,
 } from './genlayer'
 import { CONTRACT_ADDRESS, EXPLORER_BASE, NETWORK_NAME } from './config'
 import type { Bid, Procurement, TxNotice } from './types'
 
 type Tab = 'marketplace' | 'create' | 'activity'
+
+type MaterialRequirementDraft = {
+  reqKey: string
+  label: string
+  attesters: string
+}
+
+function isAddress(value: string) {
+  return /^0x[a-fA-F0-9]{40}$/.test(value.trim())
+}
 
 const KNOWN_IDS_KEY = 'tenderfit:knownProcurements'
 const LAST_ID_KEY = 'tenderfit:lastProcurementId'
@@ -100,6 +112,11 @@ export default function App() {
     const local = new Date(d.getTime() - d.getTimezoneOffset() * 60_000)
     return local.toISOString().slice(0, 16)
   })
+  const [materialRequirements, setMaterialRequirements] = useState<MaterialRequirementDraft[]>([])
+
+  const [attestSupplier, setAttestSupplier] = useState('')
+  const [attestReqKey, setAttestReqKey] = useState('')
+  const [attestStatement, setAttestStatement] = useState('')
 
   useEffect(() => {
     getConnectedWallet().then(setWallet).catch(() => undefined)
@@ -192,6 +209,30 @@ export default function App() {
     }
   }
 
+  function addMaterialRequirement() {
+    if (materialRequirements.length >= 4) return
+    setMaterialRequirements((items) => [
+      ...items,
+      { reqKey: '', label: '', attesters: '' },
+    ])
+  }
+
+  function updateMaterialRequirement(
+    index: number,
+    field: keyof MaterialRequirementDraft,
+    value: string,
+  ) {
+    setMaterialRequirements((items) =>
+      items.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item,
+      ),
+    )
+  }
+
+  function removeMaterialRequirement(index: number) {
+    setMaterialRequirements((items) => items.filter((_, itemIndex) => itemIndex !== index))
+  }
+
   async function handleCreate(event: FormEvent) {
     event.preventDefault()
     if (!wallet) {
@@ -215,6 +256,45 @@ export default function App() {
       return
     }
 
+    const normalizedMaterial = []
+    const seenKeys = new Set<string>()
+    for (const item of materialRequirements) {
+      const reqKey = item.reqKey.trim().toLowerCase()
+      const label = item.label.trim()
+      const attesters = item.attesters
+        .split(/[\s,]+/)
+        .map((value) => value.trim())
+        .filter(Boolean)
+
+      if (!/^[a-z0-9_-]{1,64}$/.test(reqKey)) {
+        setError('Each material requirement needs a 1–64 character key using a-z, 0-9, _ or -.')
+        return
+      }
+      if (seenKeys.has(reqKey)) {
+        setError(`Duplicate material requirement key: ${reqKey}`)
+        return
+      }
+      seenKeys.add(reqKey)
+      if (!label || label.length > 120) {
+        setError(`Material requirement ${reqKey} needs a label up to 120 characters.`)
+        return
+      }
+      if (attesters.length < 1 || attesters.length > 3 || attesters.some((value) => !isAddress(value))) {
+        setError(`Material requirement ${reqKey} needs 1–3 valid accepted attester addresses.`)
+        return
+      }
+      if (attesters.some((value) => sameAddress(value, wallet))) {
+        setError('The buyer cannot be an accepted attester for its own procurement.')
+        return
+      }
+
+      normalizedMaterial.push({
+        req_key: reqKey,
+        label,
+        accepted_attesters: attesters,
+      })
+    }
+
     setBusy('create')
     setError(null)
     setTxNotice(null)
@@ -225,11 +305,13 @@ export default function App() {
         createBrief.trim(),
         budget,
         deadline,
+        JSON.stringify(normalizedMaterial),
       )
       setTxNotice({ hash, label: 'Procurement created', submittedAt: Date.now() })
       setCreateTitle('')
       setCreateBrief('')
       setCreateBudget('')
+      setMaterialRequirements([])
     } catch (e) {
       setError(formatError(e))
     } finally {
@@ -278,6 +360,56 @@ export default function App() {
       })
       setBidPrice('')
       setBidProposal('')
+    } catch (e) {
+      setError(formatError(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function handleAttest() {
+    if (!wallet || !procurement) {
+      setError('Connect a wallet and load a procurement first.')
+      return
+    }
+    const supplier = attestSupplier.trim()
+    const reqKey = attestReqKey.trim().toLowerCase()
+    const statement = attestStatement.trim()
+    if (!isAddress(supplier)) {
+      setError('Enter a valid supplier address for attestation.')
+      return
+    }
+    if (!reqKey || !statement) {
+      setError('Requirement key and attestation statement are required.')
+      return
+    }
+    setBusy('attest')
+    setError(null)
+    setTxNotice(null)
+    try {
+      const hash = await attestRequirement(wallet, supplier, reqKey, statement)
+      setTxNotice({ hash, label: `Attestation signed for ${reqKey}`, submittedAt: Date.now() })
+    } catch (e) {
+      setError(formatError(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function handleRevokeAttestation() {
+    if (!wallet || !procurement) return
+    const supplier = attestSupplier.trim()
+    const reqKey = attestReqKey.trim().toLowerCase()
+    if (!isAddress(supplier) || !reqKey) {
+      setError('Supplier address and requirement key are required to revoke.')
+      return
+    }
+    setBusy('revoke-attestation')
+    setError(null)
+    setTxNotice(null)
+    try {
+      const hash = await revokeAttestation(wallet, supplier, reqKey)
+      setTxNotice({ hash, label: `Attestation revoked for ${reqKey}`, submittedAt: Date.now() })
     } catch (e) {
       setError(formatError(e))
     } finally {
@@ -413,7 +545,7 @@ export default function App() {
         <span className="overline">Supplier action</span>
         <h3>Submit a bid</h3>
         <p className="form-intro">
-          Price is checked by the contract. Your proposal is evaluated by GenLayer.
+          Material gates are checked by the contract first. The remaining semantic proposal is evaluated by GenLayer.
         </p>
 
         <label>
@@ -437,8 +569,8 @@ export default function App() {
         </label>
 
         <div className="info-note">
-          <b>AI checks fit only.</b>
-          <span>Other bids and price ranking are not included in the AI judgment.</span>
+          <b>Contract verifies material gates before GenLayer.</b>
+          <span>GenLayer judges semantic fit only; other bids and price ranking are excluded from that judgment.</span>
         </div>
 
         <button
@@ -503,8 +635,8 @@ export default function App() {
 
       <div className="signal-tape" aria-hidden="true">
         <div>
-          <span>QUALIFY BY FIT</span><b>◆</b><span>AWARD BY PRICE</span><b>◆</b><span>STATE ONCHAIN</span><b>◆</b>
-          <span>QUALIFY BY FIT</span><b>◆</b><span>AWARD BY PRICE</span><b>◆</b><span>STATE ONCHAIN</span>
+          <span>VERIFY MATERIAL</span><b>◆</b><span>QUALIFY SEMANTIC</span><b>◆</b><span>AWARD BY PRICE</span><b>◆</b>
+          <span>VERIFY MATERIAL</span><b>◆</b><span>QUALIFY SEMANTIC</span><b>◆</b><span>AWARD BY PRICE</span>
         </div>
       </div>
 
@@ -515,16 +647,16 @@ export default function App() {
               <img className="intro-logo" src="/tenderfit-logo.svg" alt="TenderFit logo" />
               <div>
                 <span className="overline">TenderFit / Live procurement desk</span>
-                <span className="intro-micro">Semantic qualification + deterministic award</span>
+                <span className="intro-micro">Attestation verification + semantic qualification + deterministic award</span>
               </div>
             </div>
 
             {tab === 'marketplace' && (
               <>
-                <h1>Qualification first.<br /><em>Price second.</em></h1>
+                <h1>Verify credentials.<br /><em>Qualify the fit.</em><br />Award by price.</h1>
                 <p>
-                  A procurement room where GenLayer decides whether each proposal actually fits the brief,
-                  then the contract awards the lowest-priced qualified bid.
+                  Material requirements are verified through buyer-approved on-chain attestations. GenLayer evaluates
+                  the remaining semantic fit, then the contract deterministically awards the lowest-priced qualified bid.
                 </p>
               </>
             )}
@@ -533,8 +665,8 @@ export default function App() {
               <>
                 <h1>Write the brief like<br /><em>a decision rule.</em></h1>
                 <p>
-                  Define mandatory requirements, maximum budget and the bidding window. TenderFit keeps the
-                  semantic judgment separate from deterministic price selection.
+                  Define the semantic brief, material attestation gates, maximum budget and bidding window. TenderFit keeps
+                  contract-verified credentials separate from GenLayer semantic judgment and deterministic price selection.
                 </p>
               </>
             )}
@@ -555,18 +687,23 @@ export default function App() {
               <span>DECISION ROUTE</span>
               <span className="live-dot"><i /> LIVE</span>
             </div>
-            <div className="decision-step semantic">
+            <div className="decision-step attestation">
               <b>01</b>
-              <div><span>GENLAYER</span><strong>Does the bid fit?</strong></div>
+              <div><span>CONTRACT</span><strong>Are material credentials attested?</strong></div>
+              <mark>VERIFIED</mark>
+            </div>
+            <div className="decision-step semantic">
+              <b>02</b>
+              <div><span>GENLAYER</span><strong>Does the remaining semantic proposal fit?</strong></div>
               <mark>SEMANTIC</mark>
             </div>
             <div className="decision-step deterministic">
-              <b>02</b>
+              <b>03</b>
               <div><span>CONTRACT</span><strong>Which qualified price is lowest?</strong></div>
               <mark>DETERMINISTIC</mark>
             </div>
             <div className="decision-board-foot">
-              <span className="genlayer-lockup"><img src="/genlayer-logo.jpg" alt="GenLayer logo" /> Built on GenLayer</span>
+              <span>CANONICAL CONTRACT</span>
               <span>{shortAddress(CONTRACT_ADDRESS)}</span>
             </div>
           </div>
@@ -650,14 +787,14 @@ export default function App() {
                   <span className="empty-icon"><img src="/tenderfit-logo.svg" alt="" /></span>
                   <h2>Load a procurement to begin.</h2>
                   <p>
-                    Enter an ID above to see the brief, AI qualification results and final award.
+                    Enter an ID above to see the brief, attestation evidence, semantic qualification results and final award.
                   </p>
                 </div>
 
                 <div className="how-grid">
-                  <div><b>1</b><strong>Brief</strong><span>Buyer defines mandatory requirements.</span></div>
-                  <div><b>2</b><strong>Qualification</strong><span>GenLayer returns qualified true/false.</span></div>
-                  <div><b>3</b><strong>Award</strong><span>Lowest-priced qualified bid wins.</span></div>
+                  <div><b>1</b><strong>Verify</strong><span>Contract checks buyer-approved material attestations.</span></div>
+                  <div><b>2</b><strong>Qualify</strong><span>GenLayer judges the remaining semantic fit.</span></div>
+                  <div><b>3</b><strong>Award</strong><span>Contract selects the lowest-priced qualified bid.</span></div>
                 </div>
               </div>
             ) : (
@@ -694,10 +831,33 @@ export default function App() {
                     <div><span>Buyer</span><strong title={procurement.buyer}>{shortAddress(procurement.buyer)}</strong></div>
                   </div>
 
+                  <div className="material-summary">
+                    <div className="material-summary-head">
+                      <div>
+                        <span className="overline">Material requirements</span>
+                        <strong>{procurement.attested_requirements?.length ?? 0} contract-side attestation gate{(procurement.attested_requirements?.length ?? 0) === 1 ? '' : 's'}</strong>
+                      </div>
+                      <span>Verified before GenLayer</span>
+                    </div>
+                    {(procurement.attested_requirements?.length ?? 0) === 0 ? (
+                      <p>No signed-attestation requirement is configured for this procurement.</p>
+                    ) : (
+                      <div className="material-chip-list">
+                        {procurement.attested_requirements.map((requirement) => (
+                          <div className="material-chip" key={requirement.req_key}>
+                            <b>{requirement.label}</b>
+                            <span>{requirement.req_key}</span>
+                            <small>Accepted attesters: {requirement.accepted_attesters.map(shortAddress).join(', ')}</small>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="stage-strip">
                     {[
-                      ['1', 'Brief'],
-                      ['2', 'AI qualification'],
+                      ['1', 'Verify'],
+                      ['2', 'Qualify'],
                       ['3', 'Award'],
                     ].map(([number, label], index) => {
                       const step = index + 1
@@ -755,7 +915,7 @@ export default function App() {
                       <div className="bid-table">
                         <div className="bid-table-head">
                           <span>Supplier / proposal</span>
-                          <span>AI fit</span>
+                          <span>Semantic fit</span>
                           <span>Price</span>
                         </div>
 
@@ -771,6 +931,17 @@ export default function App() {
                                   {isWinner && <em>WINNER</em>}
                                 </div>
                                 <p>{bid.proposal_text}</p>
+                                <div className="bid-proof-row">
+                                  {(bid.attestations_relied_on?.length ?? 0) === 0 ? (
+                                    <span className="proof-chip ai-proof">Semantic review only</span>
+                                  ) : (
+                                    bid.attestations_relied_on.map((snapshot) => (
+                                      <span className="proof-chip contract-proof" key={`${bid.bid_id}-${snapshot.req_key}-${snapshot.attester}`}>
+                                        ✓ {snapshot.req_key} · {shortAddress(snapshot.attester)}
+                                      </span>
+                                    ))
+                                  )}
+                                </div>
                               </div>
 
                               <div>
@@ -794,6 +965,41 @@ export default function App() {
                         <h2>What happens now?</h2>
                       </div>
                     </div>
+                    {procurement.attested_requirements?.length > 0 && (
+                      <div className="attestation-desk">
+                        <span className="overline">Attestation desk</span>
+                        <p>An accepted attester signs on-chain for a supplier + material requirement. Supplier self-attestation is rejected by the contract.</p>
+                        <input
+                          value={attestSupplier}
+                          onChange={(e) => setAttestSupplier(e.target.value)}
+                          placeholder="Supplier wallet 0x…"
+                        />
+                        <select value={attestReqKey} onChange={(e) => setAttestReqKey(e.target.value)}>
+                          <option value="">Select material requirement</option>
+                          {procurement.attested_requirements.map((requirement) => (
+                            <option value={requirement.req_key} key={requirement.req_key}>
+                              {requirement.req_key} — {requirement.label}
+                            </option>
+                          ))}
+                        </select>
+                        <textarea
+                          value={attestStatement}
+                          onChange={(e) => setAttestStatement(e.target.value)}
+                          maxLength={600}
+                          rows={4}
+                          placeholder="Signed statement supporting this material requirement."
+                        />
+                        <div className="attestation-actions">
+                          <button className="button button-primary" onClick={() => void handleAttest()} disabled={!wallet || busy !== null}>
+                            {busy === 'attest' ? 'Signing…' : 'Sign attestation'}
+                          </button>
+                          <button className="button button-secondary" onClick={() => void handleRevokeAttestation()} disabled={!wallet || busy !== null}>
+                            {busy === 'revoke-attestation' ? 'Revoking…' : 'Revoke'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {renderNextAction()}
 
                     {procurement.status === 'OPEN' && (
@@ -853,6 +1059,49 @@ export default function App() {
                 <div className="section-number">2</div>
                 <div className="form-section-body">
                   <div className="form-section-head">
+                    <h2>Material attestation gates</h2>
+                    <span>Optional. Certifications/capability can be anchored to buyer-approved third-party signatures.</span>
+                  </div>
+
+                  {materialRequirements.length === 0 ? (
+                    <div className="material-empty">No material attestation gate. Semantic requirements will still use GenLayer consensus.</div>
+                  ) : (
+                    <div className="material-editor-list">
+                      {materialRequirements.map((item, index) => (
+                        <div className="material-editor" key={index}>
+                          <div className="two-col">
+                            <label>
+                              <span>Requirement key</span>
+                              <input value={item.reqKey} onChange={(e) => updateMaterialRequirement(index, 'reqKey', e.target.value)} placeholder="iso9001" maxLength={64} />
+                            </label>
+                            <label>
+                              <span>Human-readable label</span>
+                              <input value={item.label} onChange={(e) => updateMaterialRequirement(index, 'label', e.target.value)} placeholder="Valid ISO 9001 certification" maxLength={120} />
+                            </label>
+                          </div>
+                          <label>
+                            <span>Accepted attester wallets (1–3, comma or space separated)</span>
+                            <input value={item.attesters} onChange={(e) => updateMaterialRequirement(index, 'attesters', e.target.value)} placeholder="0xAttesterA, 0xAttesterB" />
+                          </label>
+                          <button type="button" className="text-button danger-text" onClick={() => removeMaterialRequirement(index)}>Remove requirement</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button type="button" className="button button-secondary" disabled={materialRequirements.length >= 4} onClick={addMaterialRequirement}>
+                    + Add material requirement
+                  </button>
+                  <p className="honest-note">TenderFit does not prove a certification exists in the real world. It proves that a buyer-approved attester — never the supplier — signed for the configured requirement before the bid was submitted.</p>
+                </div>
+              </div>
+
+              <div className="form-divider" />
+
+              <div className="form-section">
+                <div className="section-number">3</div>
+                <div className="form-section-body">
+                  <div className="form-section-head">
                     <h2>Budget & deadline</h2>
                     <span>These rules are enforced deterministically by the contract.</span>
                   </div>
@@ -883,7 +1132,7 @@ export default function App() {
               <div className="form-divider" />
 
               <div className="form-section">
-                <div className="section-number">3</div>
+                <div className="section-number">4</div>
                 <div className="form-section-body">
                   <div className="form-section-head">
                     <h2>Publish</h2>
@@ -893,8 +1142,7 @@ export default function App() {
                   <div className="publish-note">
                     <strong>How TenderFit decides</strong>
                     <p>
-                      GenLayer judges semantic fit for each proposal. The contract enforces budget,
-                      deadline and final winner selection.
+                      Material requirements are checked deterministically against signed attestations before AI. GenLayer judges only the remaining semantic commitments. The contract enforces budget, deadline and final winner selection.
                     </p>
                   </div>
 
@@ -920,6 +1168,7 @@ export default function App() {
                 <ul>
                   <li>State required scope explicitly.</li>
                   <li>Separate mandatory items from preferences.</li>
+                  <li>Use attestation gates for certifications, eligibility, or material capability.</li>
                   <li>Do not ask AI to rank suppliers or price.</li>
                 </ul>
               </div>
@@ -1065,7 +1314,7 @@ export default function App() {
       <footer className="app-footer">
         <div className="footer-brand">
           <img src="/tenderfit-logo.svg" alt="TenderFit logo" />
-          <div><strong>TenderFit</strong><span>Qualification market for on-chain procurement</span></div>
+          <div><strong>TenderFit</strong><span>Attested qualification for on-chain procurement</span></div>
         </div>
         <div className="footer-genlayer">
           <img src="/genlayer-logo.jpg" alt="GenLayer logo" />

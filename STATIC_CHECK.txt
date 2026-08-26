@@ -1,0 +1,38 @@
+TenderFit V2 — steward-fixed runtime build
+
+Canonical contract: 0xfF53f36e409FBC2d42b15e214801656006A7A226
+Explorer: https://explorer-studio.genlayer.com/address/0xfF53f36e409FBC2d42b15e214801656006A7A226
+Contract SHA-256: ad71a64f34d864381244d531967c13d15d4fd268824c30931249f32417af3c28
+
+STATIC PASS
+- Python ast.parse for contracts/TenderFit.py
+- AttestationRecord storage present
+- supplier self-attestation rejected
+- buyer cannot configure itself as accepted attester
+- buyer fixes material requirements + accepted attesters at procurement creation
+- missing accepted attestation reverts before _qualification_consensus
+- current revoked attestation does not satisfy future bid gate
+- per-bid immutable attestation snapshot stores attester/supplier/req_key/statement_hash
+- finalize_procurement does not re-read attestation state
+- consensus prompt excludes attester addresses and storage ids
+- consensus prompt excludes already-attested material labels from semantic review
+- [] attested requirements supported
+- frontend material requirement editor present
+- frontend attestation desk present
+- frontend bid proof chips distinguish contract attestation from GenLayer semantic review
+- frontend decision route shows verify -> qualify -> award
+- duplicate in-hero Built on GenLayer lockup removed
+
+STUDIONET RUNTIME PASS
+- T1 material requirement storage
+- T2 missing accepted attestation rollback
+- T3 supplier self-attestation rollback
+- T4 unaccepted attester does not unlock bid
+- T5 accepted attester unlocks bid + immutable snapshot stored
+- T6 revoke changes current attestation but not prior bid snapshot
+- T7 semantic-only [] path: incomplete=false, complete=true
+- T8 deterministic finalize: procurement #3 -> bid #5 / 701 / 70000 / RESOLVED
+
+NOT YET CLAIMED
+- local production frontend build in the user's environment
+- live Vercel smoke test against the new contract
