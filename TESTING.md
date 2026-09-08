@@ -172,4 +172,4 @@ PASS canonical contract address displayed
 ```
 
 Live dApp:  
-https://tender-ewqhg1vhw-nikkks-projects.vercel.app/
+https://tender-fit.vercel.app/
