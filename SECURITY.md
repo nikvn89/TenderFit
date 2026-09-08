@@ -16,6 +16,20 @@ Deployed contract:
 
 ---
 
+## 0. What this contract is
+
+`contracts/TenderFit.py` is the **BidMatch** Intelligent Contract, deployed
+separately for this project. One source file backs two submissions: BidMatch as
+the standalone primitive, TenderFit as the full procurement workflow around it.
+The class is still named `BidMatch` because that is what is on chain, and the
+source here is byte-identical to the deployment — see the README section
+"Relationship to the BidMatch Intelligent Contract" for why it is not renamed.
+
+Everything in this document describes that shared contract. The frontend, the
+test suite and the workflow are TenderFit's alone.
+
+---
+
 ## 1. The two-layer design
 
 The Aug 2026 steward review made the point that shaped V2: a supplier's own

@@ -23,6 +23,34 @@ https://tender-fit.vercel.app/
 
 The frontend has been locally built and smoke-tested live on Vercel against the canonical steward-fixed contract.
 
+## Relationship to the BidMatch Intelligent Contract
+
+`contracts/TenderFit.py` is the **BidMatch** Intelligent Contract. The two
+submissions share one source file, deployed separately, and the contract class
+is still named `BidMatch` because that is the name it carries on chain.
+
+This is deliberate and it is stated here rather than left to be discovered:
+
+- **BidMatch** is the Intelligent Contract submission — the procurement
+  qualification primitive on its own.
+- **TenderFit** is the Project submission — that primitive plus the buyer,
+  attester and supplier workflow, the material-requirement editor, the
+  attestation desk and the decision route, all of which live in `src/` and
+  exist only here.
+
+The class name is not renamed to match the project name on purpose. The source
+in this repository is byte-identical to the deployment at
+`0xfF53f36e409FBC2d42b15e214801656006A7A226`
+(sha256 `ad71a64f34d864381244d531967c13d15d4fd268824c30931249f32417af3c28`), and
+renaming the class would change that hash and break the parity between the
+published source and the deployed contract for a cosmetic gain. If the class is
+ever renamed it will happen in the same release as a redeploy, with the address
+and hash updated together.
+
+What is TenderFit's own work, and not BidMatch's: everything under `src/`, the
+test suite under `tests/`, and this repository's documentation.
+
+
 ## Tests
 
 ```bash

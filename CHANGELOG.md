@@ -51,6 +51,16 @@ published listing points at.
     move the VM's block clock two years past a deadline and the contract accepts
     the bid anyway.
 
+- **A stated relationship to the BidMatch Intelligent Contract.**
+  `contracts/TenderFit.py` *is* the BidMatch contract — one source file backing
+  two submissions, deployed separately — and the class is still named
+  `BidMatch`. Nothing in the repository said so, which left a reviewer to
+  notice the mismatch and draw their own conclusion. README and `SECURITY.md`
+  now state it, along with why the class is deliberately not renamed: the source
+  here is byte-identical to the deployment, and renaming would change the
+  published sha256 and break that parity for a cosmetic gain. A rename belongs
+  in the same release as a redeploy.
+
 - **`.github/workflows/ci.yml`** — the repository had no CI. `npm ci`,
   `npm run build`, the suite and the mutation matrix now run on every push.
 
