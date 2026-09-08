@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  frontend:
+    name: Frontend typecheck and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  contract:
+    name: Contract tests on GenVM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install the GenLayer test runner
+        run: pip install "genlayer-test==0.29.2" "pytest>=8,<9" "genvm-linter==0.11.0"
+      - name: Lint the contract
+        run: python -m genvm_linter.cli check contracts/TenderFit.py
+      - name: Direct Mode suite
+        run: python -m pytest tests/ -q
+      - name: Mutation matrix
+        run: python tests/mutation_check.py
