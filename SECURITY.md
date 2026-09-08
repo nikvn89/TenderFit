@@ -117,10 +117,22 @@ directly.
   brief and proposal are untrusted data, and — most importantly — the model
   returns one boolean, so there is no free-text field for an injection to
   populate and nothing about price or winner selection for it to reach.
-- **Semantic judgment is judgment.** A proposal that a careful human would call
-  borderline may qualify or not. The design bounds the *consequence*, not the
-  ambiguity: an unqualified bid is simply ineligible, and the buyer can create
-  a new procurement.
+- **Semantic judgment is judgment, and it does not always settle.** A proposal
+  that a careful human would call borderline may qualify or not. Worse for a
+  first-time user: it may not resolve at all. `submit_bid` runs
+  `gl.vm.run_nondet_unsafe`, and the validator re-runs the judgment
+  independently; when the leader's verdict and the validator's disagree there is
+  no consensus and the **entire transaction reverts**, recording nothing.
+
+  This was observed during the live run in [TESTING.md](TESTING.md): the same
+  bid text, submitted three times against identical on-chain state, was rolled
+  back twice and qualified on the third attempt. That is the design failing
+  closed — an ambiguous verdict is never allowed to settle — but it means a
+  reviewer may need to resubmit, and each attempt is a fresh independent
+  judgment rather than a retry of the same one.
+
+  The design bounds the *consequence*, not the ambiguity: an unqualified bid is
+  simply ineligible, no funds move, and the buyer can create a new procurement.
 - **StudioNet demo.** No funds move on-chain; awards are records, not payments.
   A Project Explorer listing for this should be read as **Preview**, not Live.
 

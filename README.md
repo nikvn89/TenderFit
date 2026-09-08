@@ -70,6 +70,10 @@ contract's own `validator_fn` is driven separately through `run_validator`. See
 [SECURITY.md](SECURITY.md) for the trust boundaries and the one open weakness
 the suite pins down.
 
+A full end-to-end run on StudioNet — create, attestation, bid and award across
+three wallets, including a bid correctly rejected before any model ran — is
+recorded with screenshots and transaction hashes in [TESTING.md](TESTING.md).
+
 See [CHANGELOG.md](CHANGELOG.md) for the release history.
 
 ## Steward feedback addressed

@@ -5,7 +5,7 @@ All notable changes to TenderFit. Format follows
 
 ---
 
-## [0.2.0] — 2026-09-07 — Contract Test Suite on Real GenVM, and Three Frontend Fixes
+## [0.2.0] — 2026-09-08 — Contract Test Suite on Real GenVM, and Six Frontend Fixes
 
 **No contract change and no redeploy.** `contracts/TenderFit.py` is
 byte-identical to the deployed version at
@@ -108,6 +108,31 @@ published listing points at.
   the check reads the enum when present, the leader receipt's execution result
   when it is not, and treats neither as failure when both are absent.
 
+- **The app told the user its view was current when it was not.** Every
+  confirmed write displayed *"Accepted on chain. The state below is up to
+  date"* — and no handler reloaded anything. A supplier who submitted a bid saw
+  "No bids yet" until they pressed Refresh or reloaded the page. The sentence
+  was false, which is a poor thing to ship in a release about not overstating
+  what a transaction did. All five handlers now refresh the procurement before
+  reporting success.
+
+- **After creating a procurement, nothing said which one it was.**
+  `create_procurement` returns `None`, the contract has no count view, and ids
+  are sequential across every buyer — so the app left the user to guess a number
+  and type it into the lookup box. This is the same gap a steward raised on a
+  sibling project: *"the app guesses the id → must derive the exact id from the
+  confirmed creation result."* It only became fixable once writes waited for a
+  receipt, since before that there was no reliable moment to read from. The app
+  now walks up from the highest id it knows until `get_procurement` reverts,
+  loads the new procurement, and names it: **"Procurement #N created"**.
+
+- **A rolled-back transaction reported the word `rollback` and nothing else.**
+  The contract's own message — `Missing accepted attestation for requirement
+  'iso27001'`, and the like — was in the receipt but never extracted, which made
+  a failure impossible to diagnose from the interface. The reason is now dug out
+  of the leader receipt; when the receipt genuinely carries none, the message
+  says so and names the likely cause rather than printing a bare status word.
+
 - **All RPC traffic went cross-origin to Studio.** Neither `vite.config.ts` nor
   `vercel.json` proxied it. Studio answers a rate-limited request without CORS
   headers, so throttling reaches the browser as an opaque
@@ -136,8 +161,14 @@ npm ci                                 rc 0
 npm run build                          rc 0
 python3 -m pytest tests/ -q            rc 0   48 tests
 python3 tests/mutation_check.py        rc 0   20/20 killed
-genvm_linter check contracts/          lint passed (1 warning: TF-1)
+genvm_linter lint contracts/           lint passed (1 warning: TF-1)
 ```
+
+Plus a full end-to-end run on StudioNet through the live frontend — create,
+attestation, bid and award across three wallets, with the attestation gate
+rejecting a bid before any model ran. Transactions, screenshots and the
+resulting on-chain state are in [TESTING.md](TESTING.md). The last three fixes
+above were found by that run, not by reading the code.
 
 ---
 
