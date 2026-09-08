@@ -29,8 +29,18 @@ jobs:
           python-version: '3.12'
       - name: Install the GenLayer test runner
         run: pip install "genlayer-test==0.29.2" "pytest>=8,<9" "genvm-linter==0.11.0"
+      # `lint` is the AST-based safety pass and runs offline. The `check`
+      # command also downloads the SDK and runs semantic validation, which
+      # fails on network conditions rather than on anything wrong with this
+      # repository — so it is not what CI asserts.
       - name: Lint the contract
-        run: python -m genvm_linter.cli check contracts/TenderFit.py
+        run: python -m genvm_linter.cli lint contracts/TenderFit.py
+      - name: Cache the pinned GenVM build
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/gltest-direct
+          key: genvm-v0.2.12
+
       - name: Direct Mode suite
         run: python -m pytest tests/ -q
       - name: Mutation matrix
