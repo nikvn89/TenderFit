@@ -87,6 +87,66 @@ async function getWriteClient(address: `0x${string}`) {
  * receipt's execution result when it is not, and neither is treated as a
  * failure when both are absent — the caller re-reads state instead.
  */
+function revertReason(entry: any): string | null {
+  // The decoded leader receipt puts the contract's own message in different
+  // places depending on how the rollback was produced, so look in each of them
+  // before falling back to the bare status word.
+  const result = entry?.result
+
+  const candidates = [
+    result?.message,
+    result?.error,
+    result?.reason,
+    result?.data?.message,
+    result?.data,
+    typeof result === 'string' ? result : undefined,
+    entry?.error?.message,
+    entry?.error,
+  ]
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      const cleaned = candidate.trim()
+      // Skip the bare status words; they carry no information.
+      if (!/^(rollback|error|failed)$/i.test(cleaned)) return cleaned
+    }
+  }
+
+  // Last resort: the message is somewhere in the receipt but not under a name
+  // we recognise. A UserError raised by this contract is plain prose, so pull
+  // the longest string that is not an address or a hash.
+  try {
+    const seen: string[] = []
+    JSON.stringify(result ?? entry, (_key, value) => {
+      if (typeof value === 'string' && value.length > 12 &&
+          !/^0x[0-9a-f]+$/i.test(value)) {
+        seen.push(value)
+      }
+      return value
+    })
+    seen.sort((a, b) => b.length - a.length)
+    if (seen[0]) return seen[0]
+  } catch {
+    // fall through
+  }
+
+  return null
+}
+
+/**
+ * Reject a transaction that reached the chain and failed there.
+ *
+ * A GenLayer transaction that reverts at consensus still returns a hash, so a
+ * hash on its own says only "submitted". Reporting success from a hash is how
+ * a rolled-back write ends up displayed as a completed one.
+ *
+ * On StudioNet the receipt does not carry `txExecutionResultName`:
+ * `waitForTransactionReceipt` routes `isStudio` chains through
+ * `decodeLocalnetTransaction`, and only `decodeTransaction` sets that field
+ * (genlayer-js 1.1.8). So the enum is checked when present, the leader
+ * receipt's execution result when it is not, and neither is treated as a
+ * failure when both are absent — the caller re-reads state instead.
+ */
 function assertNotReverted(receipt: any, label: string) {
   const named = receipt?.txExecutionResultName
   if (typeof named === 'string' && named !== 'FINISHED_WITH_RETURN') {
@@ -95,11 +155,18 @@ function assertNotReverted(receipt: any, label: string) {
 
   const leader = receipt?.consensus_data?.leader_receipt
   const receipts = Array.isArray(leader) ? leader : leader ? [leader] : []
+
   for (const entry of receipts) {
     const outcome = entry?.execution_result ?? entry?.executionResult
     if (typeof outcome === 'string' && outcome.toUpperCase() !== 'SUCCESS') {
-      const reason = entry?.result?.status ?? entry?.result ?? outcome
-      throw new Error(`${label} was rolled back on chain: ${reason}`)
+      const reason = revertReason(entry)
+      throw new Error(
+        reason
+          ? `${label} was rolled back on chain: ${reason}`
+          : `${label} was rolled back on chain. The contract gave no reason; ` +
+            `validators may have failed to agree on the semantic verdict, ` +
+            `which reverts the whole transaction.`,
+      )
     }
   }
 }
