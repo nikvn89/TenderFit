@@ -209,6 +209,59 @@ export default function App() {
     }
   }
 
+  /**
+   * Pull the current on-chain state back into the view.
+   *
+   * Every confirmed write calls this before it reports success. Without it the
+   * success notice would claim "the state below is up to date" while the panel
+   * still showed the state from before the transaction — the user had to press
+   * Refresh, or reload the page, to see their own bid appear.
+   *
+   * Deliberately quiet: it does not touch `busy` or `error`, because the caller
+   * owns those, and a failed refresh should leave the previous view standing
+   * rather than replace a successful write with an error.
+   */
+  async function refreshProcurement(id: number) {
+    try {
+      const [nextProcurement, nextBids] = await Promise.all([
+        getProcurement(id),
+        getBids(id),
+      ])
+      setProcurement(nextProcurement)
+      setBids(nextBids)
+      setProcurementIdInput(String(id))
+      setKnownIds(rememberId(id))
+    } catch {
+      // Keep what is on screen. The notice still carries the transaction hash.
+    }
+  }
+
+  /**
+   * Find the newest procurement id.
+   *
+   * `create_procurement` returns nothing and the contract has no "count" view,
+   * so after creating one there is no way to be told its id — the ids are
+   * sequential across every buyer, and `get_procurement` reverts past the end.
+   * Walking up from the highest id this browser already knows finds the newest
+   * one in a couple of reads.
+   */
+  async function newestProcurementId(): Promise<number | null> {
+    let id = knownIds.length ? Math.max(...knownIds) : 1
+    let newest: number | null = null
+
+    for (let step = 0; step < 100; step += 1) {
+      try {
+        await getProcurement(id)
+        newest = id
+        id += 1
+      } catch {
+        break
+      }
+    }
+
+    return newest
+  }
+
   function addMaterialRequirement() {
     if (materialRequirements.length >= 4) return
     setMaterialRequirements((items) => [
@@ -314,9 +367,16 @@ export default function App() {
             confirmed: false,
           }),
       )
+      const newId = await newestProcurementId()
+      if (newId !== null) {
+        await refreshProcurement(newId)
+      }
+
       setTxNotice({
         hash,
-        label: 'Procurement created',
+        label: newId !== null
+          ? `Procurement #${newId} created`
+          : 'Procurement created',
         submittedAt: Date.now(),
         confirmed: true,
       })
@@ -373,6 +433,8 @@ export default function App() {
             confirmed: false,
           }),
       )
+      await refreshProcurement(procurement.procurement_id)
+
       setTxNotice({
         hash,
         label: `Bid accepted on #${procurement.procurement_id}`,
@@ -418,6 +480,8 @@ export default function App() {
             confirmed: false,
           }),
       )
+      if (procurement) await refreshProcurement(procurement.procurement_id)
+
       setTxNotice({
         hash,
         label: `Attestation signed for ${reqKey}`,
@@ -453,6 +517,8 @@ export default function App() {
             confirmed: false,
           }),
       )
+      if (procurement) await refreshProcurement(procurement.procurement_id)
+
       setTxNotice({
         hash,
         label: `Attestation revoked for ${reqKey}`,
@@ -489,6 +555,8 @@ export default function App() {
             confirmed: false,
           }),
       )
+      await refreshProcurement(procurement.procurement_id)
+
       setTxNotice({
         hash,
         label: `Procurement #${procurement.procurement_id} finalized`,
