@@ -306,8 +306,20 @@ export default function App() {
         budget,
         deadline,
         JSON.stringify(normalizedMaterial),
+        (submitted) =>
+          setTxNotice({
+            hash: submitted,
+            label: 'Procurement submitted',
+            submittedAt: Date.now(),
+            confirmed: false,
+          }),
       )
-      setTxNotice({ hash, label: 'Procurement created', submittedAt: Date.now() })
+      setTxNotice({
+        hash,
+        label: 'Procurement created',
+        submittedAt: Date.now(),
+        confirmed: true,
+      })
       setCreateTitle('')
       setCreateBrief('')
       setCreateBudget('')
@@ -352,11 +364,20 @@ export default function App() {
         procurement.procurement_id,
         price,
         bidProposal.trim(),
+        (submitted) =>
+          setTxNotice({
+            hash: submitted,
+            label: `Bid sent to #${procurement.procurement_id} — awaiting `
+              + `validator consensus`,
+            submittedAt: Date.now(),
+            confirmed: false,
+          }),
       )
       setTxNotice({
         hash,
-        label: `Bid submitted to #${procurement.procurement_id}`,
+        label: `Bid accepted on #${procurement.procurement_id}`,
         submittedAt: Date.now(),
+        confirmed: true,
       })
       setBidPrice('')
       setBidProposal('')
@@ -387,8 +408,22 @@ export default function App() {
     setError(null)
     setTxNotice(null)
     try {
-      const hash = await attestRequirement(wallet, supplier, reqKey, statement)
-      setTxNotice({ hash, label: `Attestation signed for ${reqKey}`, submittedAt: Date.now() })
+      const hash = await attestRequirement(
+        wallet, supplier, reqKey, statement,
+        (submitted) =>
+          setTxNotice({
+            hash: submitted,
+            label: `Attestation submitted for ${reqKey}`,
+            submittedAt: Date.now(),
+            confirmed: false,
+          }),
+      )
+      setTxNotice({
+        hash,
+        label: `Attestation signed for ${reqKey}`,
+        submittedAt: Date.now(),
+        confirmed: true,
+      })
     } catch (e) {
       setError(formatError(e))
     } finally {
@@ -408,8 +443,22 @@ export default function App() {
     setError(null)
     setTxNotice(null)
     try {
-      const hash = await revokeAttestation(wallet, supplier, reqKey)
-      setTxNotice({ hash, label: `Attestation revoked for ${reqKey}`, submittedAt: Date.now() })
+      const hash = await revokeAttestation(
+        wallet, supplier, reqKey,
+        (submitted) =>
+          setTxNotice({
+            hash: submitted,
+            label: `Revocation submitted for ${reqKey}`,
+            submittedAt: Date.now(),
+            confirmed: false,
+          }),
+      )
+      setTxNotice({
+        hash,
+        label: `Attestation revoked for ${reqKey}`,
+        submittedAt: Date.now(),
+        confirmed: true,
+      })
     } catch (e) {
       setError(formatError(e))
     } finally {
@@ -428,11 +477,23 @@ export default function App() {
     setTxNotice(null)
 
     try {
-      const hash = await finalizeProcurement(wallet, procurement.procurement_id)
+      const hash = await finalizeProcurement(
+        wallet,
+        procurement.procurement_id,
+        (submitted) =>
+          setTxNotice({
+            hash: submitted,
+            label: `Finalize #${procurement.procurement_id} sent — awaiting `
+              + `chain`,
+            submittedAt: Date.now(),
+            confirmed: false,
+          }),
+      )
       setTxNotice({
         hash,
-        label: `Finalize #${procurement.procurement_id}`,
+        label: `Procurement #${procurement.procurement_id} finalized`,
         submittedAt: Date.now(),
+        confirmed: true,
       })
     } catch (e) {
       setError(formatError(e))
@@ -720,12 +781,17 @@ export default function App() {
         )}
 
         {txNotice && (
-          <div className="notice notice-tx">
+          <div className={`notice notice-tx${txNotice.confirmed ? '' : ' notice-pending'}`}>
             <div className="notice-content">
               <span className="notice-dot" />
               <div>
                 <strong>{txNotice.label}</strong>
-                <span>Transaction submitted. Refresh after consensus/finalization.</span>
+                <span>
+                  {txNotice.confirmed
+                    ? 'Accepted on chain. The state below is up to date.'
+                    : 'Sent to the network. Waiting for it to be accepted — a '
+                      + 'hash alone does not mean the transaction succeeded.'}
+                </span>
                 <code>{txNotice.hash}</code>
               </div>
             </div>

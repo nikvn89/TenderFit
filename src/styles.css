@@ -632,3 +632,24 @@ label small { color: var(--muted); font-size: 8px; text-align: right; }
 .text-button { border:0; background:transparent; padding:8px 0 0; cursor:pointer; font-size:9px; font-weight:800; }
 .danger-text { color:var(--red); }
 .honest-note { margin:12px 0 0; padding:10px; border-left:3px solid var(--yellow); background:#fff9e8; color:#736746; font-size:9px; line-height:1.55; }
+
+/* A transaction that has been sent but not yet accepted by the chain.
+   A hash is not a result, and the notice should not read like one. */
+.notice-tx.notice-pending {
+  opacity: 0.85;
+}
+
+.notice-tx.notice-pending .notice-dot {
+  animation: notice-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notice-tx.notice-pending .notice-dot {
+    animation: none;
+  }
+}
+
+@keyframes notice-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}

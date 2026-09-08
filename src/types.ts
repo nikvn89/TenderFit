@@ -51,4 +51,6 @@ export type TxNotice = {
   hash: `0x${string}`
   label: string
   submittedAt: number
+  /** False until the chain has accepted the transaction. */
+  confirmed: boolean
 }

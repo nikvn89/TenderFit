@@ -23,6 +23,27 @@ https://tender-fit.vercel.app/
 
 The frontend has been locally built and smoke-tested live on Vercel against the canonical steward-fixed contract.
 
+## Tests
+
+```bash
+npm ci && npm run build                # frontend
+
+pip install "genlayer-test==0.29.2" "pytest>=8,<9"
+python3 -m pytest tests/ -q            # 48 tests on a real GenVM build
+python3 tests/mutation_check.py        # 20 mutants, 20 killed
+```
+
+The contract suite runs `contracts/TenderFit.py` inside GenVM through
+`genlayer-test` Direct Mode — not a Python stand-in, and no contract logic
+copied into the tests, so it always tests the file in this repository. Validator
+consensus is not simulated: the answer is supplied through `mock_llm` and the
+contract's own `validator_fn` is driven separately through `run_validator`. See
+[tests/README.md](tests/README.md) for exactly where that line is drawn, and
+[SECURITY.md](SECURITY.md) for the trust boundaries and the one open weakness
+the suite pins down.
+
+See [CHANGELOG.md](CHANGELOG.md) for the release history.
+
 ## Steward feedback addressed
 
 The previous version could qualify a supplier based on supplier-authored text about credentials or capability. V2 no longer asks GenLayer validators to treat those material claims as verified facts.

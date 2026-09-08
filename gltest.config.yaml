@@ -1,0 +1,9 @@
+# genlayer-test configuration.
+#
+# The Direct Mode suite under tests/ runs the contract inside a downloaded
+# GenVM build and never touches a network, so no RPC endpoint is required to
+# run it. This file exists so the runner's paths are explicit rather than
+# inferred, and so it stops warning on every invocation.
+paths:
+  contracts: contracts
+  artifacts: artifacts
