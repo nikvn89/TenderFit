@@ -27,6 +27,15 @@ import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
+# The GenVM build the suite runs on, pinned so a laptop and a CI runner execute
+# the same runtime. Left unpinned, gltest uses whatever is already cached
+# locally and otherwise downloads the newest release, which makes a green run
+# on one machine say nothing about another. Override with GENVM_VERSION to try
+# a different build deliberately. v0.2.12 is the build whose tarball carries
+# the py-genlayer runner hash this contract declares in its `Depends` header,
+# and it is the one every result quoted in CHANGELOG.md was measured on.
+GENVM_VERSION = __import__("os").environ.get("GENVM_VERSION", "v0.2.12")
+
 # Overridable so the mutation harness can point this same suite at a mutant.
 CONTRACT = pathlib.Path(
     __import__("os").environ.get("TENDERFIT_CONTRACT")
@@ -71,7 +80,7 @@ class _FrozenTime:
 
 @pytest.fixture
 def contract(direct_vm, direct_deploy):
-    return direct_deploy(CONTRACT)
+    return direct_deploy(CONTRACT, sdk_version=GENVM_VERSION)
 
 
 @pytest.fixture
